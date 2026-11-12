@@ -35,7 +35,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method!=='GET'){json(res,405,{error:'Method not allowed'});return;}
   if(url.pathname==='/auth/discord'){
    if(!CLIENT_ID||!CLIENT_SECRET||!SESSION_SECRET){redirect(res,'/?error=config');return;}
-   cleanup();const state=random();states.set(state,{expires:now()+10*60*1000,next:url.searchParams.get('next')==='apply'?'/apply':'/dashboard'});
+   cleanup();const state=random();states.set(state,{expires:now()+10*60*1000});
    const params=new URLSearchParams({client_id:CLIENT_ID,redirect_uri:callback,response_type:'code',scope:'identify',state,prompt:'consent'});
    redirect(res,'https://discord.com/oauth2/authorize?'+params);return;
   }
@@ -51,7 +51,7 @@ const server=http.createServer(async(req,res)=>{
    const user=await userResponse.json(),id=random();
    sessions.set(id,{user:{id:user.id,username:user.global_name||user.username,avatar:user.avatar},expires:now()+12*60*60*1000});
    setCookie(res,'takabi_session',id+'.'+sign(id),12*60*60);
-   redirect(res,stored.next||'/dashboard');return;
+   redirect(res,(await applications.manager(user))?'/dashboard':'/apply');return;
   }
   if(url.pathname==='/auth/logout'){const s=session(req);if(s)sessions.delete(s.id);setCookie(res,'takabi_session','',0);redirect(res,'/');return;}
   if(url.pathname==='/api/roblox'){
@@ -76,10 +76,13 @@ const server=http.createServer(async(req,res)=>{
   }
   if(url.pathname==='/api/me'){const s=session(req);json(res,200,s?{authenticated:true,user:s.user}:{authenticated:false});return;}
   if(url.pathname==='/apply'||url.pathname==='/apply.html'){
+   if(!session(req)){redirect(res,'/auth/discord');return;}
    html(res,'apply.html');return;
   }
   if(url.pathname==='/dashboard'||url.pathname==='/dashboard.html'){
-   if(!session(req)){redirect(res,'/');return;}
+   const current=session(req);
+   if(!current){redirect(res,'/');return;}
+   if(!await applications.manager(current.user)){redirect(res,'/apply');return;}
    html(res,'dashboard.html');return;
   }
   if(url.pathname==='/'||url.pathname==='/index.html'){html(res,'index.html');return;}
