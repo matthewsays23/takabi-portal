@@ -76,7 +76,6 @@ const server=http.createServer(async(req,res)=>{
   }
   if(url.pathname==='/api/me'){const s=session(req);json(res,200,s?{authenticated:true,user:s.user}:{authenticated:false});return;}
   if(url.pathname==='/apply'||url.pathname==='/apply.html'){
-   if(!session(req)){redirect(res,'/auth/discord');return;}
    html(res,'apply.html');return;
   }
   if(url.pathname==='/dashboard'||url.pathname==='/dashboard.html'){
