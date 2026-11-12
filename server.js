@@ -85,15 +85,9 @@ const server=http.createServer(async(req,res)=>{
    if(!await applications.manager(current.user)){redirect(res,'/apply');return;}
    html(res,'dashboard.html');return;
   }
-  // The root and index.html never show the staff landing page to non-managers.
-  // Managers see the original staff landing page; others are redirected to apply.
-  if(url.pathname==='/'||url.pathname==='/index.html'){
-   if(url.searchParams.has('error')){html(res,'index.html');return;}
-   const current=session(req);
-   if(!current){redirect(res,'/auth/discord');return;}
-   if(await applications.manager(current.user)){html(res,'index.html');return;}
-   redirect(res,'/apply');return;
-  }
+  // Public landing page: visitors choose when to sign in with Discord.
+  // Staff-only pages and APIs retain their separate server-side access checks.
+  if(url.pathname==='/'||url.pathname==='/index.html'){html(res,'index.html');return;}
   const assets={'/assets/takabi-logo.png':'image/png','/assets/icon.png':'image/png'};
   if(assets[url.pathname]){res.writeHead(200,{'Content-Type':assets[url.pathname],'Cache-Control':'public, max-age=3600','X-Content-Type-Options':'nosniff'});fs.createReadStream(path.join(__dirname,url.pathname)).pipe(res);return;}
   json(res,404,{error:'Not found'});
