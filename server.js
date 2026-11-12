@@ -86,12 +86,12 @@ const server=http.createServer(async(req,res)=>{
    html(res,'dashboard.html');return;
   }
   // The root and index.html never show the staff landing page to non-managers.
-  // Keep the original landing page only for OAuth/configuration error messages.
+  // Managers see the original staff landing page; others are redirected to apply.
   if(url.pathname==='/'||url.pathname==='/index.html'){
    if(url.searchParams.has('error')){html(res,'index.html');return;}
    const current=session(req);
    if(!current){redirect(res,'/auth/discord');return;}
-   if(await applications.manager(current.user)){redirect(res,'/dashboard');return;}
+   if(await applications.manager(current.user)){html(res,'index.html');return;}
    redirect(res,'/apply');return;
   }
   const assets={'/assets/takabi-logo.png':'image/png','/assets/icon.png':'image/png'};
