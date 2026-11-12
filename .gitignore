@@ -1,0 +1,23 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dependencies
+node_modules/
+
+# Application data and backups
+data/
+applications.json
+backups/
+*.bak
+*.backup
+*.tmp
+
+# Logs and local files
+*.log
+.DS_Store
+.vscode/
+.idea/

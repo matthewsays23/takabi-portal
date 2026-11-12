@@ -1,0 +1,7 @@
+
+/* Fixed viewport sushi layer: never participates in page scrolling/layout. */
+#sushiRain{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;contain:strict;isolation:isolate}
+.sushi{position:absolute;top:0;left:var(--x);width:var(--size);height:var(--size);opacity:var(--opacity);pointer-events:none;transform:translate3d(0,-140px,0);animation:sushiSmooth var(--d) linear infinite;animation-delay:var(--delay);will-change:transform;backface-visibility:hidden}
+.sushi svg{display:block;width:100%;height:100%}
+@keyframes sushiSmooth{from{transform:translate3d(0,-140px,0) rotate(-22deg)}to{transform:translate3d(var(--drift),calc(100dvh + 150px),0) rotate(338deg)}}
+@media(prefers-reduced-motion:reduce){.sushi{display:none!important;animation:none!important}}
