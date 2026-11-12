@@ -90,7 +90,14 @@ const server=http.createServer(async(req,res)=>{
   const assets={'/assets/takabi-logo.png':'image/png','/assets/icon.png':'image/png'};
   if(assets[url.pathname]){res.writeHead(200,{'Content-Type':assets[url.pathname],'Cache-Control':'public, max-age=3600','X-Content-Type-Options':'nosniff'});fs.createReadStream(path.join(__dirname,url.pathname)).pipe(res);return;}
   if(url.pathname==='/assets/music.js'){res.writeHead(200,{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'public, max-age=300','X-Content-Type-Options':'nosniff'});fs.createReadStream(path.join(__dirname,'assets','music.js')).pipe(res);return;}
-  json(res,404,{error:'Not found'});
+  // TAKABI_AUDIO_ASSETS: serve only the two approved MP3s and audio controller.
+ if(url.pathname==='/assets/takabi-audio.js'||url.pathname==='/assets/music1.mp3'||url.pathname==='/assets/music2.mp3'){
+  const name=path.basename(url.pathname);const type=name.endsWith('.mp3')?'audio/mpeg':'application/javascript; charset=utf-8';
+  const file=path.join(__dirname,'assets',name);
+  if(!fs.existsSync(file)){json(res,404,{error:'Asset not found'});return;}
+  res.writeHead(200,{'Content-Type':type,'Cache-Control':'public, max-age=3600','X-Content-Type-Options':'nosniff'});fs.createReadStream(file).pipe(res);return;
+ }
+ json(res,404,{error:'Not found'});
  }catch(err){console.error('[Takabi]',err);if(!res.headersSent)json(res,500,{error:'Internal server error'});else res.end();}
 });
 server.listen(PORT,()=>console.log(`Takabi portal listening on port ${PORT}; Discord redirect URI: ${callback}`));
