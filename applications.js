@@ -31,6 +31,22 @@ async function manager(user){
     return roles.some(x=>member.roles.includes(x.id)&&(x.id===threshold.id||x.position>threshold.position));
   }catch(e){console.error('[Takabi] Permission check:',e.message);return false;}
 }
+async function alreadyStaff(user){
+  if(!user?.id||!process.env.DISCORD_BOT_TOKEN)throw new Error('Discord staff verification is unavailable');
+  const opts=()=>({headers:{Authorization:'Bot '+process.env.DISCORD_BOT_TOKEN},signal:AbortSignal.timeout(6500)});
+  const [g,r,m]=await Promise.all([
+    fetch(`https://discord.com/api/v10/guilds/${guildId}`,opts()),
+    fetch(`https://discord.com/api/v10/guilds/${guildId}/roles`,opts()),
+    fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${encodeURIComponent(user.id)}`,opts())
+  ]);
+  if(m.status===404)return false;
+  if(!g.ok||!r.ok||!m.ok)throw new Error('Could not verify Takabi staff roles');
+  const guild=await g.json(),roles=await r.json(),member=await m.json();
+  if(String(guild.owner_id)===String(user.id))return true;
+  const moderator=roles.find(x=>x.name.trim().toLowerCase()==='moderator');
+  if(!moderator)throw new Error('Moderator role was not found on Takabi');
+  return roles.some(x=>member.roles.includes(x.id)&&(x.id===moderator.id||x.position>moderator.position));
+}
 async function canDeleteHistory(user){
   if(!user?.id||!process.env.DISCORD_BOT_TOKEN)return false;
   try{
@@ -68,10 +84,10 @@ function sameOrigin(req){const origin=req.headers.origin;if(!origin)return false
 async function handle(req,res,url,user){if(!url.pathname.startsWith('/api/applications/'))return false;
 if(!user?.id){reply(res,401,{error:'Sign in with Discord first'});return true;}
 const route=url.pathname.slice('/api/applications'.length);
-if(req.method==='GET'&&route==='/config'){reply(res,200,{open:store.open,manager:await manager(user),canDeleteHistory:await canDeleteHistory(user),questions});return true;}
+if(req.method==='GET'&&route==='/config'){let staff;try{staff=await alreadyStaff(user);}catch(e){console.error('[Takabi] Staff verification:',e.message);reply(res,503,{error:'Unable to verify your staff role right now. Please try again.'});return true;}reply(res,200,{open:store.open,alreadyStaff:staff,manager:await manager(user),canDeleteHistory:await canDeleteHistory(user),questions});return true;}
 if(req.method==='GET'&&route==='/mine'){const a=store.applications.find(x=>x.discord_id===user.id);reply(res,200,{application:a?{id:a.id,status:a.status,created_at:a.created_at}:null});return true;}
 if(req.method==='POST'||req.method==='PATCH'||req.method==='DELETE'){if(!sameOrigin(req)){reply(res,403,{error:'Invalid request origin'});return true;}}
-if(req.method==='POST'&&route==='/submit'){if(!store.open){reply(res,403,{error:'Applications are currently closed'});return true;}if(store.applications.some(x=>x.discord_id===user.id)){reply(res,409,{error:'You have already submitted an application'});return true;}let payload;try{payload=await body(req);}catch{reply(res,400,{error:'Invalid JSON'});return true;}const answers=payload.answers;if(!answers||typeof answers!=='object'||Array.isArray(answers)){reply(res,400,{error:'Invalid answers'});return true;}for(const q of questions){if(typeof answers[q.id]!=='string'||answers[q.id].trim().length<q.min||answers[q.id].length>q.max){reply(res,400,{error:'Please complete: '+q.label});return true;}}let roblox;try{roblox=await verifiedRoblox(user.id);}catch(e){reply(res,422,{error:e.message});return true;}
+if(req.method==='POST'&&route==='/submit'){let staff;try{staff=await alreadyStaff(user);}catch(e){console.error('[Takabi] Staff verification:',e.message);reply(res,503,{error:'Unable to verify your staff role right now. Please try again.'});return true;}if(staff){reply(res,403,{error:'You are already a Takabi staff member (Moderator or higher) and cannot apply.'});return true;}if(!store.open){reply(res,403,{error:'Applications are currently closed'});return true;}if(store.applications.some(x=>x.discord_id===user.id)){reply(res,409,{error:'You have already submitted an application'});return true;}let payload;try{payload=await body(req);}catch{reply(res,400,{error:'Invalid JSON'});return true;}const answers=payload.answers;if(!answers||typeof answers!=='object'||Array.isArray(answers)){reply(res,400,{error:'Invalid answers'});return true;}for(const q of questions){if(typeof answers[q.id]!=='string'||answers[q.id].trim().length<q.min||answers[q.id].length>q.max){reply(res,400,{error:'Please complete: '+q.label});return true;}}let roblox;try{roblox=await verifiedRoblox(user.id);}catch(e){reply(res,422,{error:e.message});return true;}
 answers.roblox=roblox.username;
 const a={roblox_id:roblox.id,id:store.nextId++,discord_id:user.id,discord_name:String(user.username||'Discord user').slice(0,100),answers:Object.fromEntries(questions.map(q=>[q.id,answers[q.id].trim()])),status:'Needs Review',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),reviewed_by:null};store.applications.push(a);save();reply(res,201,{id:a.id});return true;}
 if(req.method==='DELETE'&&route==='/manage/history'){
