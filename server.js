@@ -25,7 +25,7 @@ function redirect(res,location){res.writeHead(302,{'Location':location,'Cache-Co
 function json(res,code,obj){res.writeHead(code,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(obj));}
 function session(req){const raw=cookie(req,'takabi_session');if(!raw)return null;const [id,mac]=raw.split('.');if(!id||!mac||!/^[0-9a-f]{64}$/.test(mac))return null;const expected=sign(id);if(!crypto.timingSafeEqual(Buffer.from(mac),Buffer.from(expected)))return null;const s=sessions.get(id);if(!s||s.expires<now()){sessions.delete(id);return null;}return{id,...s};}
 function cleanup(){for(const[k,v]of sessions)if(v.expires<now())sessions.delete(k);for(const[k,v]of states)if(v.expires<now())states.delete(k);}
-const csp="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.rbxcdn.com https://cdn.discordapp.com; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'";
+const csp="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.rbxcdn.com https://cdn.discordapp.com; connect-src 'self'; frame-src https://www.youtube.com; base-uri 'none'; frame-ancestors 'none'";
 function html(res,filename){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':csp});fs.createReadStream(path.join(__dirname,filename)).pipe(res);}
 const server=http.createServer(async(req,res)=>{
  try{
@@ -89,6 +89,7 @@ const server=http.createServer(async(req,res)=>{
   if(url.pathname==='/'||url.pathname==='/index.html'){html(res,'index.html');return;}
   const assets={'/assets/takabi-logo.png':'image/png','/assets/icon.png':'image/png'};
   if(assets[url.pathname]){res.writeHead(200,{'Content-Type':assets[url.pathname],'Cache-Control':'public, max-age=3600','X-Content-Type-Options':'nosniff'});fs.createReadStream(path.join(__dirname,url.pathname)).pipe(res);return;}
+  if(url.pathname==='/assets/music.js'){res.writeHead(200,{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'public, max-age=300','X-Content-Type-Options':'nosniff'});fs.createReadStream(path.join(__dirname,'assets','music.js')).pipe(res);return;}
   json(res,404,{error:'Not found'});
  }catch(err){console.error('[Takabi]',err);if(!res.headersSent)json(res,500,{error:'Internal server error'});else res.end();}
 });

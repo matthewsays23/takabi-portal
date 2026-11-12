@@ -67,4 +67,4 @@ const sushiArt = [
 ];
 const rain=document.getElementById('sushiRain');
 if(rain){const count=5;const fragment=document.createDocumentFragment();for(let i=0;i<count;i++){const el=document.createElement('span');el.className='sushi';el.innerHTML=sushiArt[i%sushiArt.length];el.style.setProperty('--x',(i%2===0? 3+i*2 : 87+i)+'%');el.style.setProperty('--size',(30+(i*13%22))+'px');el.style.setProperty('--opacity',(0.11+(i%3)*0.035));el.style.setProperty('--d',(17+(i*7%13))+'s');el.style.setProperty('--delay',(-i*2.7)+'s');el.style.setProperty('--drift',((i%2?1:-1)*(30+i*7%90))+'px');fragment.appendChild(el)}rain.appendChild(fragment)}
-</script></body></html>
+</script><script src="/assets/music.js" defer></script></body></html>
