@@ -10,6 +10,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "better-sqlite3": "^13.1.1"
+    "better-sqlite3": "^13.1.1",
+    "discord.js": "^14.28.1"
   }
 }
