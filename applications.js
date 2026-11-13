@@ -108,4 +108,4 @@ if(req.method==='GET'&&route==='/manage'){reply(res,200,{open:store.open,applica
 if(req.method==='PATCH'&&route==='/manage/settings'){let p;try{p=await body(req);}catch{reply(res,400,{error:'Invalid JSON'});return true;}if(typeof p.open!=='boolean'){reply(res,400,{error:'Invalid setting'});return true;}store.open=p.open;save();reply(res,200,{open:store.open});return true;}
 const match=route.match(/^\/manage\/(\d+)$/);if(match){const a=store.applications.find(x=>x.id===Number(match[1]));if(!a){reply(res,404,{error:'Not found'});return true;}if(req.method==='GET'){reply(res,200,a);return true;}if(req.method==='PATCH'){let p;try{p=await body(req);}catch{reply(res,400,{error:'Invalid JSON'});return true;}if(!['Needs Review','Approved','Denied'].includes(p.status)){reply(res,400,{error:'Invalid status'});return true;}a.status=p.status;a.updated_at=new Date().toISOString();a.reviewed_by=user.id;save();reply(res,200,{ok:true});return true;}}}
 reply(res,404,{error:'Not found'});return true;}
-module.exports={handle,manager};
+module.exports={handle,manager,alreadyStaff};

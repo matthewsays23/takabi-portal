@@ -6,6 +6,7 @@ const path=require('node:path');
 const crypto=require('node:crypto');
 const {URL,URLSearchParams}=require('node:url');
 const applications=require('./applications');
+const serverLogs=require('./server-logs');
 const PORT=Number(process.env.PORT||3000);
 const BASE=process.env.PUBLIC_URL||`http://localhost:${PORT}`;
 const CLIENT_ID=process.env.DISCORD_CLIENT_ID;
@@ -31,6 +32,15 @@ const server=http.createServer(async(req,res)=>{
  try{
   const url=new URL(req.url,BASE);
   // Application API must run BEFORE the GET-only restriction (submit/settings use POST/PATCH).
+  if(url.pathname==='/api/server-logs/access'||url.pathname==='/api/server-logs'){
+   if(req.method!=='GET'){json(res,405,{error:'Method not allowed'});return;}
+   const user=session(req)?.user;
+   if(!user){json(res,401,{error:'Sign in required'});return;}
+   const allowed=await applications.alreadyStaff(user);
+   if(url.pathname==='/api/server-logs/access'){json(res,200,{allowed});return;}
+   if(!allowed){json(res,403,{error:'Moderator or higher required'});return;}
+   json(res,200,serverLogs.query(url.searchParams));return;
+  }
   if(url.pathname.startsWith('/api/applications/')){await applications.handle(req,res,url,session(req)?.user||null);return;}
   if(req.method!=='GET'){json(res,405,{error:'Method not allowed'});return;}
   if(url.pathname==='/auth/discord'){
@@ -51,7 +61,7 @@ const server=http.createServer(async(req,res)=>{
    const user=await userResponse.json(),id=random();
    sessions.set(id,{user:{id:user.id,username:user.global_name||user.username,avatar:user.avatar},expires:now()+12*60*60*1000});
    setCookie(res,'takabi_session',id+'.'+sign(id),12*60*60);
-   redirect(res,(await applications.manager(user))?'/dashboard':'/apply');return;
+   redirect(res,(await applications.alreadyStaff(user))?'/dashboard':'/apply');return;
   }
   if(url.pathname==='/auth/logout'){const s=session(req);if(s)sessions.delete(s.id);setCookie(res,'takabi_session','',0);redirect(res,'/');return;}
   if(url.pathname==='/api/roblox'){
@@ -81,7 +91,7 @@ const server=http.createServer(async(req,res)=>{
   if(url.pathname==='/dashboard'||url.pathname==='/dashboard.html'){
    const current=session(req);
    if(!current){redirect(res,'/');return;}
-   if(!await applications.manager(current.user)){redirect(res,'/apply');return;}
+   if(!await applications.alreadyStaff(current.user)){redirect(res,'/apply');return;}
    html(res,'dashboard.html');return;
   }
   // Public landing page: visitors choose when to sign in with Discord.
@@ -101,3 +111,6 @@ const server=http.createServer(async(req,res)=>{
  }catch(err){console.error('[Takabi]',err);if(!res.headersSent)json(res,500,{error:'Internal server error'});else res.end();}
 });
 server.listen(PORT,()=>console.log(`Takabi portal listening on port ${PORT}; Discord redirect URI: ${callback}`));
+
+// Discord gateway listener shares the portal's persistent log store.
+require('./discord-logger').start();
