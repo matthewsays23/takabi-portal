@@ -7,7 +7,7 @@ const client=new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.Gui
 const label=u=>u?`${u.username||u.displayName||u.name||'Unknown'} (${u.id||'?'})`:'Unknown';
 const record=(category,title,detail,actor,target)=>{try{logs.append(category,title,detail,actor,target)}catch(e){console.error('[Takabi logs]',e.message)}};
 async function audit(guild,type,targetId){try{const data=await guild.fetchAuditLogs({type,limit:5});return data.entries.find(e=>Date.now()-e.createdTimestamp<12000&&(!targetId||String(e.target?.id)===String(targetId)))||null}catch{return null}}
-client.on('ready',()=>{console.log('[Takabi logs] Connected as '+client.user.tag);record('server','Logger connected','Discord event collection started',label(client.user))});
+client.on('ready',()=>{console.log('[Takabi logs] Connected as '+client.user.tag)});
 client.on('guildMemberAdd',m=>{if(m.guild.id===guildId)record('member','Member joined',`Account created ${m.user.createdAt.toISOString()}`,label(m.user))});
 client.on('guildMemberRemove',async m=>{if(m.guild.id!==guildId)return;const kick=await audit(m.guild,AuditLogEvent.MemberKick,m.id);const ban=await audit(m.guild,AuditLogEvent.MemberBanAdd,m.id);const action=ban?'Member banned':kick?'Member kicked':'Member left';record('member',action,`Previous roles: ${m.roles?.cache?.map(r=>r.name).join(', ')||'Unavailable'}`,label(ban?.executor||kick?.executor),label(m.user))});
 client.on('guildBanAdd',async ban=>{if(ban.guild.id!==guildId)return;const e=await audit(ban.guild,AuditLogEvent.MemberBanAdd,ban.user.id);record('moderation','Member banned',e?.reason||'No audit reason',label(e?.executor),label(ban.user))});
